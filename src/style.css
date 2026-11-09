@@ -3585,3 +3585,192 @@ textarea:focus-visible {
   white-space: normal;
   line-height: 1.25;
 }
+
+/* Dashboard typography */
+.workspace {
+  font-size: 14px;
+}
+.side-nav button {
+  font-size: 13px;
+}
+.sidebar-env,
+.sidebar-label {
+  font-size: 10px;
+}
+.user-meta b {
+  font-size: 11px;
+}
+.user-meta small,
+.crumb {
+  font-size: 12px;
+}
+.crumb span:first-child,
+.system-status {
+  font-size: 10px;
+}
+.page-header .section-kicker,
+.metric-label,
+.panel-heading .section-kicker,
+.case-indicator,
+.case-info > .section-kicker,
+.settings-panel > .section-kicker {
+  font-size: 10px;
+}
+.page-header h1 {
+  font-size: 32px;
+}
+.page-header p,
+.metric-card > small,
+.mini-event-copy small,
+.mini-investigation small,
+.finding-copy small,
+.table-title small,
+.inv-card-main p,
+.timeline-entry-main p,
+.case-info > p,
+.settings-panel > p,
+.rule-list,
+.empty-state > p {
+  font-size: 13px;
+}
+.metric-card {
+  padding: 18px;
+}
+.metric-label {
+  letter-spacing: 0.04em;
+}
+.panel-heading h2 {
+  font-size: 17px;
+}
+.panel-link,
+.mini-event-copy b,
+.mini-investigation b,
+.finding-copy b,
+.finding-case,
+.empty-state > b,
+.search-field input,
+.events-table td,
+.table-title b,
+.inv-card-main p,
+.new-investigation-card b,
+.timeline-entry-main h3,
+.relation-item b,
+.settings-panel h2,
+.profile-block b,
+.settings-line,
+.settings-line b,
+.inline-error,
+.toast,
+.page-header > .button,
+.empty-state .button {
+  font-size: 14px;
+}
+.count-badge,
+.mini-event time,
+.finding-row.static .finding-mark,
+.result-count,
+.events-table th,
+.type-chip,
+.source-cell,
+.time-cell,
+.inv-card-foot,
+.timeline-entry-head time,
+.timeline-source,
+.case-info-line,
+.case-info-line b,
+.settings-panel > .section-kicker,
+.settings-line b {
+  font-size: 10px !important;
+}
+.search-field {
+  height: 40px;
+}
+.search-field input {
+  font-size: 13px;
+}
+.toolbar select,
+.timeline-select select {
+  font-size: 12px;
+}
+.events-table th {
+  height: 42px;
+}
+.events-table td {
+  height: 64px;
+}
+.type-chip {
+  min-height: 23px;
+  padding: 0 8px;
+}
+.inv-card-main p {
+  line-height: 1.6;
+}
+.timeline-entry-main h3 {
+  line-height: 1.45;
+}
+.relation-item b,
+.profile-block b,
+.profile-block small,
+.settings-line {
+  font-size: 12px;
+}
+.settings-panel > p {
+  line-height: 1.7;
+}
+.workspace-footnote {
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .side-nav button {
+    font-size: 11px;
+  }
+  .crumb {
+    font-size: 11px;
+  }
+  .system-status {
+    font-size: 9px;
+  }
+  .page-header h1 {
+    font-size: 27px;
+  }
+  .page-header .section-kicker,
+  .metric-label,
+  .panel-heading .section-kicker {
+    font-size: 9px;
+  }
+  .page-header p,
+  .metric-card > small,
+  .mini-event-copy small,
+  .mini-investigation small,
+  .finding-copy small,
+  .empty-state > p {
+    font-size: 12px;
+  }
+  .metric-card {
+    padding: 13px;
+  }
+  .metric-label {
+    font-size: 10px;
+  }
+  .metric-label {
+    letter-spacing: 0;
+  }
+  .panel-heading h2 {
+    font-size: 14px;
+  }
+  .mini-event-copy b,
+  .mini-investigation b,
+  .finding-copy b,
+  .empty-state > b,
+  .page-header > .button,
+  .empty-state .button {
+    font-size: 13px;
+  }
+  .mini-event time {
+    font-size: 10px !important;
+  }
+  .workspace-footnote {
+    font-size: 8px;
+  }
+}
