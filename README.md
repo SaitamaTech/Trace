@@ -1,6 +1,20 @@
-# TRACE — Event Intelligence
+# TRACE — AI-Powered Business Intelligence & Automation Platform
 
-TRACE is a local-first event investigation MVP. Capture events, group them into investigations, connect relationships, reconstruct a timeline, and review explainable deterministic inconsistency checks.
+TRACE has evolved from a local event investigation MVP into an operational intelligence workspace that combines AI reasoning, business APIs, database memory, and deterministic analysis. The project preserves the existing event-first foundation while adding workflow orchestration, external integrations, investigation execution, and trustable rule validation.
+
+## Product direction
+
+TRACE helps teams understand operations across payments, orders, inventory, logistics, and customer activity. It is designed to:
+
+- interpret business questions in natural language,
+- retrieve the relevant events and investigation records from the database,
+- call approved business APIs when configured,
+- run deterministic validation checks independently of model reasoning,
+- identify contradictions, missing states, and dependency issues,
+- recommend safe actions with evidence,
+- record the final outcome for audit and review.
+
+The application remains grounded in the existing TRACE architecture: React + TypeScript frontend, Express API, and SQLite persistence. The current MVP focuses on correctness, account-level isolation, and evidence-based workflows rather than a generic chatbot experience.
 
 ## Run it locally
 

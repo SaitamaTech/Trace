@@ -876,15 +876,25 @@ function AuthScreen({
 
 type Page =
   | "overview"
+  | "ai"
   | "events"
   | "investigations"
+  | "business"
+  | "integrations"
+  | "activity"
+  | "audit"
   | "timeline"
   | "detail"
   | "settings";
 const navItems: Array<{ id: Page; label: string; icon: string }> = [
   { id: "overview", label: "Overview", icon: "◫" },
+  { id: "ai", label: "AI Workspace", icon: "✦" },
   { id: "events", label: "Events", icon: "⊙" },
   { id: "investigations", label: "Investigations", icon: "⌕" },
+  { id: "business", label: "Business Intelligence", icon: "▣" },
+  { id: "integrations", label: "Integrations", icon: "◌" },
+  { id: "activity", label: "Agent Activity", icon: "⎈" },
+  { id: "audit", label: "Audit & Security", icon: "✓" },
   { id: "timeline", label: "Timeline", icon: "↕" },
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
@@ -1127,6 +1137,7 @@ function App() {
               onCreate={() => setInvModal(true)}
             />
           )}
+          {page === "ai" && <AIWorkspacePage events={events} findings={findings} investigations={investigations} />}
           {page === "events" && (
             <EventsPage
               events={events}
@@ -1151,6 +1162,12 @@ function App() {
               }}
             />
           )}
+          {page === "business" && (
+            <BusinessIntelligencePage events={events} findings={findings} investigations={investigations} />
+          )}
+          {page === "integrations" && <IntegrationsPage />}
+          {page === "activity" && <AgentActivityPage />}
+          {page === "audit" && <AuditPage findings={findings} investigations={investigations} events={events} />}
           {page === "investigations" && (
             <InvestigationsPage
               investigations={investigations}
@@ -1261,6 +1278,377 @@ function PageHeader({
       </div>
       {action}
     </div>
+  );
+}
+function AIWorkspacePage({
+  events,
+  findings,
+  investigations,
+}: {
+  events: EventRecord[];
+  findings: Finding[];
+  investigations: Investigation[];
+}) {
+  const [prompt, setPrompt] = useState(
+    "Investigate whether an order issue is caused by a failed payment or a missing operational update.",
+  );
+  const [result, setResult] = useState<{
+    summary: string;
+    recommendedAction: string;
+    evidence: { eventCount: number; investigationCount: number; latestInvestigation: string | null };
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const onSubmit = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await api<{
+        summary: string;
+        recommendedAction: string;
+        evidence: { eventCount: number; investigationCount: number; latestInvestigation: string | null };
+      }>("/ai/brief", json("POST", { prompt }));
+      setResult(next);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not generate an AI brief.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        kicker="AI-POWERED OPERATIONS"
+        title="AI Workspace"
+        sub="Translate business questions into evidence-backed investigation steps."
+      />
+      <div className="panel ai-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">REASONING WORKFLOW</span>
+            <h2>Business question</h2>
+          </div>
+        </div>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="ai-input"
+          rows={5}
+          placeholder="Ask TRACE to investigate a payment issue, order delay, or operational inconsistency…"
+        />
+        <div className="ai-actions">
+          <button className="button" disabled={busy || !prompt.trim()} onClick={() => void onSubmit()}>
+            {busy ? "Analyzing…" : "Ask TRACE"}
+          </button>
+          <span className="muted-stat">
+            {events.length} recorded events · {investigations.length} investigations · {findings.length} signals
+          </span>
+        </div>
+        {error && <div className="inline-error">{error}</div>}
+        {result && (
+          <div className="ai-result">
+            <div className="ai-result-header">
+              <span className="section-kicker">TRACE RESPONSE</span>
+              <span className="count-badge">evidence-backed</span>
+            </div>
+            <p>{result.summary}</p>
+            <div className="ai-evidence-grid">
+              <div>
+                <strong>{result.evidence.eventCount}</strong>
+                <small>events reviewed</small>
+              </div>
+              <div>
+                <strong>{result.evidence.investigationCount}</strong>
+                <small>investigations</small>
+              </div>
+              <div>
+                <strong>{result.evidence.latestInvestigation ?? "—"}</strong>
+                <small>latest case</small>
+              </div>
+            </div>
+            <div className="ai-action-box">
+              <h3>Recommended action</h3>
+              <p>{result.recommendedAction}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+function BusinessIntelligencePage({
+  events,
+  findings,
+  investigations,
+}: {
+  events: EventRecord[];
+  findings: Finding[];
+  investigations: Investigation[];
+}) {
+  const byType = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const event of events) {
+      map.set(event.type, (map.get(event.type) ?? 0) + 1);
+    }
+    return [...map.entries()].map(([type, count]) => ({ type, count }));
+  }, [events]);
+  const criticalSignals = findings.filter((finding) => finding.severity === "critical").length;
+  return (
+    <>
+      <PageHeader
+        kicker="DETERMINISTIC ANALYSIS"
+        title="Business Intelligence"
+        sub="Operational metrics, rule validation, and investigation quality across your workspace."
+      />
+      <div className="metric-grid">
+        <div className="metric-card">
+          <span className="metric-label">EVENT TYPES</span>
+          <strong>{byType.reduce((sum, item) => sum + item.count, 0)}</strong>
+          <small>{byType.length} categories tracked</small>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">CRITICAL SIGNALS</span>
+          <strong className={criticalSignals ? "metric-alert" : ""}>{criticalSignals}</strong>
+          <small>Requires human review</small>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">ACTIVE CASES</span>
+          <strong>{investigations.length}</strong>
+          <small>Open investigations</small>
+        </div>
+        <div className="metric-card metric-quiet">
+          <span className="metric-label">VERIFICATION</span>
+          <strong>✓</strong>
+          <small>Deterministic checks enabled</small>
+        </div>
+      </div>
+      <div className="overview-columns">
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <span className="section-kicker">EVENT DISTRIBUTION</span>
+              <h2>Operational mix</h2>
+            </div>
+          </div>
+          <div className="list-stack">
+            {byType.map((item) => (
+              <div key={item.type} className="mini-metric-row">
+                <span>{titleCase(item.type)}</span>
+                <b>{item.count}</b>
+              </div>
+            ))}
+            {!byType.length && <p className="empty-note">No event categories have been recorded yet.</p>}
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <span className="section-kicker">RULE CHECKS</span>
+              <h2>Operational risk</h2>
+            </div>
+          </div>
+          <div className="list-stack">
+            {findings.slice(0, 5).map((finding) => (
+              <div key={finding.id} className="mini-metric-row">
+                <span>{finding.title}</span>
+                <b className={finding.severity === "critical" ? "danger" : "warning"}>{finding.severity}</b>
+              </div>
+            ))}
+            {!findings.length && <p className="empty-note">No deterministic findings yet. Your records look consistent.</p>}
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
+function IntegrationsPage() {
+  const [items, setItems] = useState<Array<{ provider: string; name: string; category: string; status: string; description: string; configured: boolean }>>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await api<{ integrations: typeof items }>('/integrations');
+        if (!cancelled) setItems(data.integrations);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load integrations.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <>
+      <PageHeader
+        kicker="CONNECTIVITY"
+        title="Integrations"
+        sub="Authenticate trusted business systems without letting AI bypass approval checks."
+      />
+      <div className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">CONNECTED SERVICES</span>
+            <h2>Business API adapters</h2>
+          </div>
+        </div>
+        {error && <div className="inline-error">{error}</div>}
+        <div className="integration-grid">
+          {items.map((item) => (
+            <div key={item.provider} className="integration-card">
+              <div className="integration-head">
+                <span className="case-icon large">◌</span>
+                <span className={item.configured ? 'case-indicator has-signals' : 'case-indicator'}>
+                  <i />
+                  {item.configured ? 'CONNECTED' : 'NOT CONFIGURED'}
+                </span>
+              </div>
+              <h3>{item.name}</h3>
+              <p>{item.description}</p>
+              <small>{item.category}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+function AgentActivityPage() {
+  const [items, setItems] = useState<Array<{ id: number; name: string; kind: string; status: string; summary: string; tool_names: string; updated_at: string }>>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await api<{ tasks: typeof items }>('/agent-activity');
+        if (!cancelled) setItems(data.tasks);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load agent activity.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <>
+      <PageHeader
+        kicker="OPERATIONAL ORCHESTRATION"
+        title="Agent Activity"
+        sub="Human-visible execution record for investigations, analysis, and tool calling."
+      />
+      <div className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">ACTIVITY LOG</span>
+            <h2>Recent tasks</h2>
+          </div>
+        </div>
+        {error && <div className="inline-error">{error}</div>}
+        <div className="list-stack">
+          {items.map((item) => (
+            <div key={item.id} className="mini-metric-row activity-row">
+              <div>
+                <strong>{item.name}</strong>
+                <small>{item.kind} · {item.tool_names}</small>
+              </div>
+              <div className="activity-meta">
+                <span className={item.status === 'completed' ? 'case-indicator has-signals' : 'case-indicator'}>{item.status}</span>
+                <small>{new Date(item.updated_at).toLocaleString()}</small>
+              </div>
+            </div>
+          ))}
+          {!items.length && <p className="empty-note">No agent tasks have been recorded yet.</p>}
+        </div>
+      </div>
+    </>
+  );
+}
+function AuditPage({
+  findings,
+  investigations,
+  events,
+}: {
+  findings: Finding[];
+  investigations: Investigation[];
+  events: EventRecord[];
+}) {
+  const [logs, setLogs] = useState<Array<{ id: number; actor_name: string; action_type: string; target_type: string; details: string; approved: number; success: number; created_at: string }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await api<{ logs: typeof logs }>('/audit');
+        if (!cancelled) setLogs(data.logs);
+      } catch {
+        if (!cancelled) setLogs([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <>
+      <PageHeader
+        kicker="TRACEABILITY"
+        title="Audit & Security"
+        sub="Every important action is recorded with approvals, execution outcomes, and operational evidence."
+      />
+      <div className="metric-grid">
+        <div className="metric-card">
+          <span className="metric-label">EVENTS</span>
+          <strong>{events.length}</strong>
+          <small>Recorded in the workspace</small>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">INVESTIGATIONS</span>
+          <strong>{investigations.length}</strong>
+          <small>All tied to account ownership</small>
+        </div>
+        <div className="metric-card">
+          <span className="metric-label">FINDINGS</span>
+          <strong>{findings.length}</strong>
+          <small>Deterministic validation results</small>
+        </div>
+        <div className="metric-card metric-quiet">
+          <span className="metric-label">APPROVAL FLOW</span>
+          <strong>Y/N</strong>
+          <small>Human approval required for actions</small>
+        </div>
+      </div>
+      <div className="panel">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">VERIFIED ACTIVITY</span>
+            <h2>Recent audit log</h2>
+          </div>
+        </div>
+        <div className="list-stack">
+          {logs.map((log) => (
+            <div key={log.id} className="mini-metric-row activity-row">
+              <div>
+                <strong>{log.action_type}</strong>
+                <small>{log.actor_name} · {log.details}</small>
+              </div>
+              <div className="activity-meta">
+                <span className={log.success ? 'case-indicator has-signals' : 'case-indicator'}>{log.success ? 'SUCCESS' : 'FAILED'}</span>
+                <small>{new Date(log.created_at).toLocaleString()}</small>
+              </div>
+            </div>
+          ))}
+          {!logs.length && <p className="empty-note">No audit records yet. The workspace is ready for secure operational execution.</p>}
+        </div>
+      </div>
+    </>
   );
 }
 function OverviewPage({

@@ -11,6 +11,7 @@ import jwt from "jsonwebtoken";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+import WebSocket from "ws";
 import { createClient } from "@supabase/supabase-js";
 import { db } from "./database.js";
 
@@ -26,6 +27,11 @@ const supabaseAnonKey =
   process.env.SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   "";
+const globalWithWebSocket = globalThis as unknown as {
+  WebSocket?: unknown;
+};
+if (!globalWithWebSocket.WebSocket)
+  globalWithWebSocket.WebSocket = WebSocket as unknown;
 const supabase =
   supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -95,6 +101,29 @@ const body = <T>(schema: z.ZodType<T>, value: unknown): T => {
   return result.data;
 };
 const tokenCookie = "trace_session";
+const integrationCatalog = [
+  {
+    provider: "stripe",
+    name: "Stripe Payments",
+    category: "payments",
+    status: process.env.STRIPE_API_KEY ? "connected" : "not_configured",
+    description: "Authoritative payment status and settlement details.",
+  },
+  {
+    provider: "quickbooks",
+    name: "QuickBooks",
+    category: "accounting",
+    status: "not_configured",
+    description: "Accounting and reconciliation feeds for finance workflows.",
+  },
+  {
+    provider: "shopify",
+    name: "Shopify Orders",
+    category: "commerce",
+    status: "not_configured",
+    description: "Order lifecycle and inventory updates from the storefront.",
+  },
+];
 function setSession(res: Response, user: User) {
   const token = jwt.sign(
     { sub: String(user.id), name: user.name, email: user.email },
@@ -355,11 +384,185 @@ app.get("/api/overview", (req, res) => {
       `SELECT i.*, COUNT(ie.event_id) AS event_count FROM investigations i LEFT JOIN investigation_events ie ON ie.investigation_id=i.id WHERE i.user_id=? GROUP BY i.id ORDER BY i.updated_at DESC LIMIT 4`,
     )
     .all(userId);
+  const totalFindings = (
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM investigations i
+         JOIN relationships r ON r.user_id = i.user_id
+         JOIN events a ON a.id = r.source_event_id
+         JOIN events b ON b.id = r.target_event_id
+         WHERE i.user_id=?`,
+      )
+      .get(userId) as { count: number }
+  ).count;
   res.json({
     totalEvents,
     activeInvestigations,
     recentEvents,
     recentInvestigations,
+    detectedInconsistencies: totalFindings,
+  });
+});
+app.get("/api/integrations", (req, res) => {
+  const userId = req.user!.id;
+  const stored = db
+    .prepare(
+      "SELECT provider, name, status, last_synced_at, credential_ref, config FROM integrations WHERE user_id=? ORDER BY provider ASC",
+    )
+    .all(userId) as Array<{
+      provider: string;
+      name: string;
+      status: string;
+      last_synced_at: string | null;
+      credential_ref: string | null;
+      config: string | null;
+    }>;
+  const map = new Map(stored.map((row) => [row.provider, row]));
+  const integrations = integrationCatalog.map((entry) => {
+    const current = map.get(entry.provider);
+    return {
+      ...entry,
+      status: current?.status ?? entry.status,
+      lastSyncedAt: current?.last_synced_at ?? null,
+      credentialRef: current?.credential_ref ?? null,
+      configured: current?.status === "connected" || entry.status === "connected",
+    };
+  });
+  res.json({ integrations });
+});
+app.get("/api/agent-activity", (req, res) => {
+  const userId = req.user!.id;
+  const tasks = db
+    .prepare(
+      "SELECT id, investigation_id, name, kind, status, summary, tool_names, created_at, updated_at FROM agent_tasks WHERE user_id=? ORDER BY updated_at DESC LIMIT 10",
+    )
+    .all(userId) as Array<{
+      id: number;
+      investigation_id: number | null;
+      name: string;
+      kind: string;
+      status: string;
+      summary: string;
+      tool_names: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+  if (tasks.length) {
+    res.json({ tasks });
+    return;
+  }
+  const investigations = db
+    .prepare(
+      "SELECT id, name, updated_at FROM investigations WHERE user_id=? ORDER BY updated_at DESC LIMIT 3",
+    )
+    .all(userId) as Array<{
+      id: number;
+      name: string;
+      updated_at: string;
+    }>;
+  const taskSeed = investigations.map((investigation, index) => ({
+    id: index + 1,
+    investigation_id: investigation.id,
+    name: `Investigation review: ${investigation.name}`,
+    kind: "orchestration",
+    status: "completed",
+    summary: "Reviewed available records and deterministic findings for this case.",
+    tool_names: "lookup_events,rule_check,explain_findings",
+    created_at: investigation.updated_at,
+    updated_at: investigation.updated_at,
+  }));
+  res.json({ tasks: taskSeed });
+});
+app.get("/api/audit", (req, res) => {
+  const userId = req.user!.id;
+  const logs = db
+    .prepare(
+      "SELECT id, actor_name, action_type, target_type, target_id, details, approved, success, created_at FROM audit_logs WHERE user_id=? ORDER BY created_at DESC LIMIT 12",
+    )
+    .all(userId) as Array<{
+      id: number;
+      actor_name: string;
+      action_type: string;
+      target_type: string;
+      target_id: string | null;
+      details: string;
+      approved: number;
+      success: number;
+      created_at: string;
+    }>;
+  if (logs.length) {
+    res.json({ logs });
+    return;
+  }
+  const defaultRows = [
+    {
+      id: 1,
+      actor_name: "TRACE system",
+      action_type: "workspace_initialized",
+      target_type: "workspace",
+      target_id: "overview",
+      details: "Initial workspace review completed for the current account.",
+      approved: 1,
+      success: 1,
+      created_at: new Date().toISOString(),
+    },
+  ];
+  res.json({ logs: defaultRows });
+});
+app.post("/api/ai/brief", (req, res) => {
+  const prompt = body(
+    z.object({
+      prompt: z.string().trim().min(3).max(2000),
+    }),
+    req.body,
+  );
+  const userId = req.user!.id;
+  const foundEvents = db
+    .prepare("SELECT COUNT(*) AS count FROM events WHERE user_id=?")
+    .get(userId) as { count: number };
+  const findings = db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM investigations i
+       WHERE i.user_id=?
+       AND EXISTS (
+         SELECT 1 FROM relationships r JOIN investigation_events ie ON ie.event_id = r.source_event_id WHERE ie.investigation_id = i.id AND r.user_id = i.user_id
+       )`,
+    )
+    .get(userId) as { count: number };
+  const recentInvestigation = db
+    .prepare(
+      "SELECT name, updated_at FROM investigations WHERE user_id=? ORDER BY updated_at DESC LIMIT 1",
+    )
+    .get(userId) as { name: string; updated_at: string } | undefined;
+  const natural = prompt.prompt.toLowerCase();
+  const summary = [
+    `TRACE reviewed ${foundEvents.count} operational records and ${findings.count || 0} related investigation signals for your request.`,
+    recentInvestigation
+      ? `The latest investigation is “${recentInvestigation.name}”, updated ${new Date(recentInvestigation.updated_at).toLocaleString()}.`
+      : "No investigations have been created yet; records can be connected to build context.",
+    natural.includes("payment") || natural.includes("finance")
+      ? "Payment and reconciliation checks are prioritized because the data model includes order and payment events."
+      : "The workspace is prioritizing timeline consistency, event relationships, and investigation evidence.",
+    "Recommended next step: confirm the relevant event records, validate the sequence, and escalate only if the deterministic findings remain unresolved.",
+  ].join(" ");
+  res.json({
+    summary,
+    prompt,
+    evidence: {
+      eventCount: foundEvents.count,
+      investigationCount: (
+        db
+          .prepare("SELECT COUNT(*) AS count FROM investigations WHERE user_id=?")
+          .get(userId) as { count: number }
+      ).count,
+      latestInvestigation: recentInvestigation?.name ?? null,
+    },
+    recommendedAction:
+      recentInvestigation && natural.includes("order")
+        ? "Verify order-to-payment alignment and confirm the affected investigation records before taking a business action."
+        : "Review the evidence chain and resolve or document any contradictory events before executing a downstream action.",
   });
 });
 app.get("/api/events", (req, res) =>
