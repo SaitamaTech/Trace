@@ -1350,7 +1350,7 @@ function AIWorkspacePage({
       <PageHeader
         kicker="AI-POWERED OPERATIONS"
         title="AI Workspace"
-        sub="Investigate operational questions with OpenAI reasoning grounded in your TRACE records."
+        sub="Investigate operational questions with Gemini reasoning grounded in your TRACE records."
       />
       <div className="ai-workspace">
         <section className="panel ai-compose">
@@ -1362,7 +1362,7 @@ function AIWorkspacePage({
             </div>
           </div>
           <p className="ai-compose-copy">
-            Ask a question about your operations. TRACE will check your records and deterministic findings before asking OpenAI to explain what the evidence supports.
+            Ask a question about your operations. TRACE will check your records and deterministic findings before asking Gemini to explain what the evidence supports.
           </p>
           <div className="ai-prompts" aria-label="Suggested questions">
             {[
@@ -1399,7 +1399,7 @@ function AIWorkspacePage({
             />
             <div className="ai-form-footer">
               <span className="ai-privacy-note">
-                Your question and relevant TRACE records are sent to OpenAI for this response.
+                Your question and relevant TRACE records are sent to Google Gemini for this response.
               </span>
               <button className="button" type="submit" disabled={busy || !prompt.trim() || configured === false}>
                 {busy ? <><span className="ai-spinner" /> Investigating…</> : <>Run investigation <Arrow /></>}
@@ -1408,8 +1408,8 @@ function AIWorkspacePage({
           </form>
           {configured === false && (
             <div className="ai-config-notice">
-              <b>OpenAI is not configured.</b>
-              <span>Add <code>OPENAI_API_KEY</code> to the server environment and restart TRACE to enable live responses.</span>
+              <b>Gemini is not configured.</b>
+              <span>Add <code>GEMINI_API_KEY</code> to the server environment and restart TRACE to enable live responses.</span>
             </div>
           )}
           {error && <div className="inline-error">{error}</div>}
@@ -1418,7 +1418,7 @@ function AIWorkspacePage({
               <i
                 className={`ai-status-dot${configured === false ? " is-off" : configured === null ? " is-checking" : ""}`}
               />
-              {configured ? "OpenAI configured" : configured === false ? "AI unavailable" : "Checking AI configuration"}
+              {configured ? "Gemini configured" : configured === false ? "AI unavailable" : "Checking AI configuration"}
             </span>
             <span>{events.length} events</span>
             <span>{investigations.length} investigations</span>
@@ -1463,7 +1463,7 @@ function AIWorkspacePage({
             <span className="ai-empty-mark">✦</span>
             <span className="section-kicker">READY TO INVESTIGATE</span>
             <h2>Start with a business question</h2>
-            <p>TRACE will retrieve your events, investigations, relationships, and deterministic checks. OpenAI will reason over that evidence and call out what is unknown.</p>
+            <p>TRACE will retrieve your events, investigations, relationships, and deterministic checks. Gemini will reason over that evidence and call out what is unknown.</p>
             <div className="ai-empty-stats">
               <span><b>{events.length}</b> recorded events</span>
               <span><b>{investigations.length}</b> investigations</span>

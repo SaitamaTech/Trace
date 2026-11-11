@@ -97,8 +97,8 @@ test("API supports authenticated investigation flows and isolates account data",
         PORT: String(port),
         DATABASE_PATH: path.join(folder, "test.sqlite"),
         AUTH_SECRET: "integration-test-secret-at-least-32-characters-long",
-        OPENAI_API_KEY: "",
-        OPENAI_MODEL: "gpt-4.1-mini",
+        GEMINI_API_KEY: "",
+        GEMINI_MODEL: "gemini-2.5-flash",
         SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
         SUPABASE_ANON_KEY: "integration-anon-key",
       },
@@ -171,7 +171,7 @@ test("API supports authenticated investigation flows and isolates account data",
   const aiStatus = await send("/ai/status", "GET", undefined, cookie);
   assert.deepEqual(aiStatus.data, {
     configured: false,
-    model: "gpt-4.1-mini",
+    model: "gemini-2.5-flash",
   });
   const unconfiguredAiRequest = await send(
     "/ai/brief",
@@ -180,7 +180,7 @@ test("API supports authenticated investigation flows and isolates account data",
     cookie,
   );
   assert.equal(unconfiguredAiRequest.response.status, 503);
-  assert.match(unconfiguredAiRequest.data.error, /OPENAI_API_KEY/);
+  assert.match(unconfiguredAiRequest.data.error, /GEMINI_API_KEY/);
 
   const linkedGoogleAccount = await send("/auth/supabase", "POST", {
     accessToken: "google-existing-token",

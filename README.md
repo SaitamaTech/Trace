@@ -41,15 +41,15 @@ For production, also set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the API serve
 
 The browser uses Supabase to complete Google OAuth. TRACE verifies the Supabase access token on its server, then issues its existing HTTP-only session cookie. Investigation data and account ownership remain in SQLite. Google accounts with an already-registered, verified email are linked to that TRACE account.
 
-To enable live responses in the AI Workspace, add your OpenAI API key to the server's `.env` file:
+To enable live responses in the AI Workspace, create a Gemini API key in Google AI Studio and add it to the server's `.env` file:
 
 ```env
-OPENAI_API_KEY=your-key
-# Optional; defaults to gpt-4.1-mini
-OPENAI_MODEL=gpt-4.1-mini
+GEMINI_API_KEY=your-key
+# Optional; defaults to gemini-2.5-flash
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-Keep the key server-side: do not prefix it with `VITE_`, commit it, or enter it in the browser. Restart TRACE after updating `.env`. When a user submits a question, TRACE sends that question and a limited set of their own event, investigation, relationship, and deterministic finding records to OpenAI. The response is grounded in those records; it does not execute actions or claim to have checked external systems.
+Keep the key server-side: do not prefix it with `VITE_`, commit it, or enter it in the browser. Restart TRACE after updating `.env`. When a user submits a question, TRACE sends that question and a limited set of their own event, investigation, relationship, and deterministic finding records to Gemini. The response is grounded in those records; it does not execute actions or claim to have checked external systems.
 
 Then start the client and API together:
 
@@ -76,10 +76,10 @@ The production server requires `AUTH_SECRET` (at least 32 characters) and serves
 - Investigation create, delete, event membership, and chronological evidence view.
 - Event relationships: caused by, followed by, related to, contradicts, and depends on.
 - Rule-based findings for failed payments alongside successful orders, missing payment attempts or outcomes, duplicate event records in a case, reversed dependency timestamps, and explicit contradictions.
-- The AI Workspace retrieves account-owned records and deterministic findings, then requests an evidence-grounded response from OpenAI when `OPENAI_API_KEY` is configured.
+- The AI Workspace retrieves account-owned records and deterministic findings, then requests an evidence-grounded response from Gemini when `GEMINI_API_KEY` is configured.
 - Responsive landing page, overview metrics from SQLite, event and investigation lists, timeline, and account settings.
 
-Detection is deterministic and reports why each rule matched. OpenAI responses are separate from deterministic calculations and do not replace their results. Events are entered through the user interface in this MVP (there is no external event-ingestion integration yet).
+Detection is deterministic and reports why each rule matched. Gemini responses are separate from deterministic calculations and do not replace their results. Events are entered through the user interface in this MVP (there is no external event-ingestion integration yet).
 
 ## Project layout
 
