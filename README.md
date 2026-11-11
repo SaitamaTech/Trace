@@ -45,11 +45,13 @@ To enable live responses in the AI Workspace, create a Gemini API key in Google 
 
 ```env
 GEMINI_API_KEY=your-key
-# Optional; defaults to gemini-2.5-flash
-GEMINI_MODEL=gemini-2.5-flash
+# Optional; defaults to gemini-3.8-flash
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 Keep the key server-side: do not prefix it with `VITE_`, commit it, or enter it in the browser. Restart TRACE after updating `.env`. When a user submits a question, TRACE sends that question and a limited set of their own event, investigation, relationship, and deterministic finding records to Gemini. The response is grounded in those records; it does not execute actions or claim to have checked external systems.
+
+If Gemini returns a model-not-found error, confirm `GEMINI_MODEL` is a model enabled for your API key in Google AI Studio. The former default `gemini-2.5-flash` is deprecated and may not be available to new API users.
 
 Then start the client and API together:
 

@@ -98,7 +98,7 @@ test("API supports authenticated investigation flows and isolates account data",
         DATABASE_PATH: path.join(folder, "test.sqlite"),
         AUTH_SECRET: "integration-test-secret-at-least-32-characters-long",
         GEMINI_API_KEY: "",
-        GEMINI_MODEL: "gemini-2.5-flash",
+        GEMINI_MODEL: "",
         SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
         SUPABASE_ANON_KEY: "integration-anon-key",
       },
@@ -171,7 +171,7 @@ test("API supports authenticated investigation flows and isolates account data",
   const aiStatus = await send("/ai/status", "GET", undefined, cookie);
   assert.deepEqual(aiStatus.data, {
     configured: false,
-    model: "gemini-2.5-flash",
+    model: "gemini-3.8-flash",
   });
   const unconfiguredAiRequest = await send(
     "/ai/brief",

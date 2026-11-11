@@ -732,6 +732,15 @@ function AuthScreen({
       </div>
       <div className="auth-orb orb-a" />
       <div className="auth-orb orb-b" />
+      <div className="auth-float auth-float-a" aria-hidden="true">
+        <span className="auth-float-ring"><i /></span>
+      </div>
+      <div className="auth-float auth-float-b" aria-hidden="true">
+        <span className="auth-float-diamond" />
+      </div>
+      <div className="auth-float auth-float-c" aria-hidden="true">
+        <span className="auth-float-bars"><i /><i /><i /><i /><i /></span>
+      </div>
       <section className="auth-card" aria-labelledby="auth-title">
         <h1 id="auth-title">
           {mode === "register" ? "Create your account" : "Sign in to TRACE"}

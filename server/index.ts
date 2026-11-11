@@ -513,7 +513,7 @@ app.get("/api/audit", (req, res) => {
 app.get("/api/ai/status", (_req, res) => {
   res.json({
     configured: Boolean(process.env.GEMINI_API_KEY),
-    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
   });
 });
 app.post(
@@ -624,7 +624,7 @@ app.post(
       "SELECT name, updated_at FROM investigations WHERE user_id=? ORDER BY updated_at DESC LIMIT 1",
     )
     .get(userId) as { name: string; updated_at: string } | undefined;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   const input = {
     question: prompt.prompt,
     evidence: {
@@ -679,6 +679,11 @@ app.post(
       }
     | null;
   if (!geminiResponse.ok) {
+    if (geminiResponse.status === 404)
+      throw new HttpError(
+        502,
+        `Gemini model "${model}" was not found or is unavailable for this API key. Set GEMINI_MODEL to a model available in Google AI Studio (for example, gemini-3.8-flash), then restart TRACE.`,
+      );
     if (geminiResponse.status === 400 || geminiResponse.status === 403)
       throw new HttpError(502, "Gemini rejected the request or API key. Check GEMINI_API_KEY and the selected model.");
     if (geminiResponse.status === 401)
