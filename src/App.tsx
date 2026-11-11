@@ -1313,8 +1313,18 @@ function AIWorkspacePage({
     };
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!busy) return;
+    const timer = window.setInterval(
+      () => setElapsedSeconds((seconds) => seconds + 1),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [busy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1333,6 +1343,7 @@ function AIWorkspacePage({
 
   const onSubmit = async () => {
     setBusy(true);
+    setElapsedSeconds(0);
     setError("");
     try {
       const next = await api<{
@@ -1434,7 +1445,21 @@ function AIWorkspacePage({
             <span>{findings.length} deterministic findings</span>
           </div>
         </section>
-        {result ? (
+        {busy ? (
+          <section className="panel ai-thinking" role="status" aria-live="polite">
+            <div className="ai-thinking-icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span className="section-kicker">INVESTIGATION IN PROGRESS</span>
+            <h2>Gemini is thinking</h2>
+            <p>TRACE has gathered your workspace evidence. Gemini is reviewing it and preparing an answer.</p>
+            <span className="ai-thinking-time">
+              <i /> {elapsedSeconds}s elapsed · responses may take up to 90 seconds
+            </span>
+          </section>
+        ) : result ? (
           <section className="panel ai-answer">
             <div className="ai-answer-head">
               <div>

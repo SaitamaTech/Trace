@@ -3919,6 +3919,87 @@ textarea:focus-visible {
     radial-gradient(ellipse at 100% 0%, #7169b212, transparent 45%),
     linear-gradient(145deg, #121216, #101013);
 }
+.ai-thinking {
+  display: flex;
+  min-height: 390px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px;
+  background:
+    radial-gradient(ellipse at 100% 0%, #7169b212, transparent 45%),
+    linear-gradient(145deg, #121216, #101013);
+}
+.ai-thinking-icon {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 25px;
+  border: 1px solid #625c9c66;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #393451, #201e2d);
+  box-shadow: inset 0 1px #ffffff12, 0 8px 26px #0003;
+}
+.ai-thinking-icon span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b7b0ff;
+  box-shadow: 0 0 10px #a59aff88;
+  animation: ai-thinking-bounce 1.1s ease-in-out infinite;
+}
+.ai-thinking-icon span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ai-thinking-icon span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.ai-thinking .section-kicker {
+  color: #8d89c7;
+}
+.ai-thinking h2 {
+  margin: 9px 0 8px;
+  color: #eeedf4;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.ai-thinking > p {
+  max-width: 380px;
+  margin: 0;
+  color: #898994;
+  font-size: 12px;
+  line-height: 1.75;
+}
+.ai-thinking-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 21px;
+  padding-top: 14px;
+  border-top: 1px solid #2b2a32;
+  color: #777782;
+  font: 10px var(--mono);
+}
+.ai-thinking-time i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a49eff;
+  box-shadow: 0 0 8px #a49eff77;
+  animation: ai-thinking-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ai-thinking-bounce {
+  0%, 60%, 100% { opacity: 0.45; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+@keyframes ai-thinking-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
 .ai-empty-mark {
   width: 36px;
   height: 36px;
@@ -4256,6 +4337,10 @@ textarea:focus-visible {
     align-self: flex-end;
   }
   .ai-empty-state {
+    min-height: 240px;
+    padding: 21px;
+  }
+  .ai-thinking {
     min-height: 240px;
     padding: 21px;
   }

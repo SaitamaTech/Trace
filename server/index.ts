@@ -660,12 +660,12 @@ app.post(
         ],
         generationConfig: { maxOutputTokens: 900 },
       }),
-      signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(90_000),
       },
     );
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError")
-      throw new HttpError(504, "Gemini took too long to respond. Please try again.");
+        throw new HttpError(504, "Gemini did not respond within 90 seconds. Please try again.");
     throw new HttpError(502, "Could not connect to Gemini. Check the server connection and try again.");
   }
   const providerResult = (await geminiResponse.json().catch(() => null)) as
