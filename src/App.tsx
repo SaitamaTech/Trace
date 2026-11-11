@@ -1098,7 +1098,7 @@ function App() {
               }}
             >
               <span className="side-icon">{item.icon}</span>
-              {item.label}
+              <span className="side-label">{item.label}</span>
               {item.id === "events" && events.length > 0 && (
                 <span className="side-count">{events.length}</span>
               )}
