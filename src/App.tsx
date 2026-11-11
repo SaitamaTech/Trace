@@ -927,6 +927,13 @@ function App() {
     event?: EventRecord;
   }>({ open: false });
   const [invModal, setInvModal] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmationBusy, setConfirmationBusy] = useState(false);
   const startAuth = (mode: "login" | "register" = "register") => {
     setAuthError("");
     setAuthMode(mode);
@@ -1023,6 +1030,18 @@ function App() {
       setPage("overview");
       setSelectedId(null);
       setScreen("landing");
+    }
+  }
+  async function confirmAction() {
+    if (!confirmation || confirmationBusy) return;
+    setConfirmationBusy(true);
+    try {
+      await confirmation.onConfirm();
+      setConfirmation(null);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "The action could not be completed.");
+    } finally {
+      setConfirmationBusy(false);
     }
   }
   if (checking)
@@ -1153,21 +1172,16 @@ function App() {
               onCreate={() => setEventModal({ open: true })}
               onEdit={(event) => setEventModal({ open: true, event })}
               onDelete={async (event) => {
-                if (
-                  !confirm(
-                    `Delete “${event.title}”? This also removes it from linked investigations.`,
-                  )
-                )
-                  return;
-                try {
+                setConfirmation({
+                  title: "Delete event?",
+                  message: `“${event.title}” will be permanently deleted and removed from any linked investigations.`,
+                  confirmLabel: "Delete event",
+                  onConfirm: async () => {
                   await api(`/events/${event.id}`, json("DELETE"));
                   setNotice("Event deleted.");
                   await refresh();
-                } catch (e) {
-                  setNotice(
-                    e instanceof Error ? e.message : "Could not delete event.",
-                  );
-                }
+                  },
+                });
               }}
             />
           )}
@@ -1187,18 +1201,16 @@ function App() {
                 setPage("detail");
               }}
               onDelete={async (inv) => {
-                if (!confirm(`Delete investigation “${inv.name}”?`)) return;
-                try {
+                setConfirmation({
+                  title: "Delete investigation?",
+                  message: `“${inv.name}” and its event links will be permanently deleted. The events themselves will remain in your event log.`,
+                  confirmLabel: "Delete investigation",
+                  onConfirm: async () => {
                   await api(`/investigations/${inv.id}`, json("DELETE"));
                   setNotice("Investigation deleted.");
                   await refresh();
-                } catch (e) {
-                  setNotice(
-                    e instanceof Error
-                      ? e.message
-                      : "Could not delete investigation.",
-                  );
-                }
+                  },
+                });
               }}
             />
           )}
@@ -1212,6 +1224,9 @@ function App() {
                 await refresh();
               }}
               onNotice={setNotice}
+              onRequestConfirmation={(title, message, confirmLabel, action) =>
+                setConfirmation({ title, message, confirmLabel, onConfirm: action })
+              }
             />
           )}
           {page === "timeline" && (
@@ -1252,6 +1267,18 @@ function App() {
             setNotice("Investigation created.");
             await refresh();
           }}
+        />
+      )}
+      {confirmation && (
+        <ConfirmationModal
+          title={confirmation.title}
+          message={confirmation.message}
+          confirmLabel={confirmation.confirmLabel}
+          busy={confirmationBusy}
+          onCancel={() => {
+            if (!confirmationBusy) setConfirmation(null);
+          }}
+          onConfirm={() => void confirmAction()}
         />
       )}
       {notice && (
@@ -2234,6 +2261,7 @@ function InvestigationPage({
   onBack,
   onRefresh,
   onNotice,
+  onRequestConfirmation,
 }: {
   id: number;
   allEvents: EventRecord[];
@@ -2241,6 +2269,12 @@ function InvestigationPage({
   onBack: () => void;
   onRefresh: () => Promise<void>;
   onNotice: (s: string) => void;
+  onRequestConfirmation: (
+    title: string,
+    message: string,
+    confirmLabel: string,
+    action: () => Promise<void>,
+  ) => void;
 }) {
   const [detail, setDetail] = useState<InvestigationDetail | null>(null);
   const [err, setErr] = useState("");
@@ -2280,16 +2314,17 @@ function InvestigationPage({
     }
   }
   async function removeEvent(event: EventRecord) {
-    if (
-      !confirm(
-        `Remove “${event.title}” from this investigation? The event itself will remain in your event log.`,
-      )
-    )
-      return;
-    await api(`/investigations/${id}/events/${event.id}`, json("DELETE"));
-    await load();
-    await onRefresh();
-    onNotice("Event removed from this investigation.");
+    onRequestConfirmation(
+      "Remove event from investigation?",
+      `“${event.title}” will be unlinked from this investigation. The event will remain in your event log.`,
+      "Remove event",
+      async () => {
+        await api(`/investigations/${id}/events/${event.id}`, json("DELETE"));
+        await load();
+        await onRefresh();
+        onNotice("Event removed from this investigation.");
+      },
+    );
   }
   if (err)
     return (
@@ -3043,6 +3078,49 @@ function Modal({
         {children}
       </section>
     </div>
+  );
+}
+
+function ConfirmationModal({
+  title,
+  message,
+  confirmLabel,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal onClose={onCancel} title={title} kicker="CONFIRM ACTION">
+      <div className="confirm-content">
+        <div className="confirm-icon" aria-hidden="true">!</div>
+        <p>{message}</p>
+        <div className="modal-actions">
+          <button
+            className="button button-quiet"
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <button
+            className="button confirm-danger"
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? "Working…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
