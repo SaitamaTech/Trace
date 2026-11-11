@@ -97,6 +97,8 @@ test("API supports authenticated investigation flows and isolates account data",
         PORT: String(port),
         DATABASE_PATH: path.join(folder, "test.sqlite"),
         AUTH_SECRET: "integration-test-secret-at-least-32-characters-long",
+        OPENAI_API_KEY: "",
+        OPENAI_MODEL: "gpt-4.1-mini",
         SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
         SUPABASE_ANON_KEY: "integration-anon-key",
       },
@@ -166,6 +168,19 @@ test("API supports authenticated investigation flows and isolates account data",
   assert.equal(first.data.user.email, "one@example.test");
   assert.equal("password_hash" in first.data.user, false);
   const cookie = first.cookie;
+  const aiStatus = await send("/ai/status", "GET", undefined, cookie);
+  assert.deepEqual(aiStatus.data, {
+    configured: false,
+    model: "gpt-4.1-mini",
+  });
+  const unconfiguredAiRequest = await send(
+    "/ai/brief",
+    "POST",
+    { prompt: "Investigate the latest payment status." },
+    cookie,
+  );
+  assert.equal(unconfiguredAiRequest.response.status, 503);
+  assert.match(unconfiguredAiRequest.data.error, /OPENAI_API_KEY/);
 
   const linkedGoogleAccount = await send("/auth/supabase", "POST", {
     accessToken: "google-existing-token",

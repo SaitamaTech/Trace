@@ -1290,24 +1290,52 @@ function AIWorkspacePage({
   investigations: Investigation[];
 }) {
   const [prompt, setPrompt] = useState(
-    "Investigate whether an order issue is caused by a failed payment or a missing operational update.",
+    "",
   );
   const [result, setResult] = useState<{
-    summary: string;
-    recommendedAction: string;
-    evidence: { eventCount: number; investigationCount: number; latestInvestigation: string | null };
+    answer: string;
+    model: string;
+    evidence: {
+      eventCount: number;
+      investigationCount: number;
+      findingCount: number;
+      latestInvestigation: string | null;
+      records: Array<{ id: number; title: string; type: string; occurredAt: string }>;
+    };
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [configured, setConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api<{ configured: boolean }>("/ai/status")
+      .then((status) => {
+        if (!cancelled) setConfigured(status.configured);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Could not check AI configuration.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = async () => {
     setBusy(true);
     setError("");
     try {
       const next = await api<{
-        summary: string;
-        recommendedAction: string;
-        evidence: { eventCount: number; investigationCount: number; latestInvestigation: string | null };
+        answer: string;
+        model: string;
+        evidence: {
+          eventCount: number;
+          investigationCount: number;
+          findingCount: number;
+          latestInvestigation: string | null;
+          records: Array<{ id: number; title: string; type: string; occurredAt: string }>;
+        };
       }>("/ai/brief", json("POST", { prompt }));
       setResult(next);
     } catch (e) {
@@ -1322,57 +1350,126 @@ function AIWorkspacePage({
       <PageHeader
         kicker="AI-POWERED OPERATIONS"
         title="AI Workspace"
-        sub="Translate business questions into evidence-backed investigation steps."
+        sub="Investigate operational questions with OpenAI reasoning grounded in your TRACE records."
       />
-      <div className="panel ai-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="section-kicker">REASONING WORKFLOW</span>
-            <h2>Business question</h2>
-          </div>
-        </div>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="ai-input"
-          rows={5}
-          placeholder="Ask TRACE to investigate a payment issue, order delay, or operational inconsistency…"
-        />
-        <div className="ai-actions">
-          <button className="button" disabled={busy || !prompt.trim()} onClick={() => void onSubmit()}>
-            {busy ? "Analyzing…" : "Ask TRACE"}
-          </button>
-          <span className="muted-stat">
-            {events.length} recorded events · {investigations.length} investigations · {findings.length} signals
-          </span>
-        </div>
-        {error && <div className="inline-error">{error}</div>}
-        {result && (
-          <div className="ai-result">
-            <div className="ai-result-header">
-              <span className="section-kicker">TRACE RESPONSE</span>
-              <span className="count-badge">evidence-backed</span>
-            </div>
-            <p>{result.summary}</p>
-            <div className="ai-evidence-grid">
-              <div>
-                <strong>{result.evidence.eventCount}</strong>
-                <small>events reviewed</small>
-              </div>
-              <div>
-                <strong>{result.evidence.investigationCount}</strong>
-                <small>investigations</small>
-              </div>
-              <div>
-                <strong>{result.evidence.latestInvestigation ?? "—"}</strong>
-                <small>latest case</small>
-              </div>
-            </div>
-            <div className="ai-action-box">
-              <h3>Recommended action</h3>
-              <p>{result.recommendedAction}</p>
+      <div className="ai-workspace">
+        <section className="panel ai-compose">
+          <div className="ai-compose-heading">
+            <div className="ai-orb" aria-hidden="true">✦</div>
+            <div>
+              <span className="section-kicker">TRACE INTELLIGENCE</span>
+              <h2>What should we investigate?</h2>
             </div>
           </div>
+          <p className="ai-compose-copy">
+            Ask a question about your operations. TRACE will check your records and deterministic findings before asking OpenAI to explain what the evidence supports.
+          </p>
+          <div className="ai-prompts" aria-label="Suggested questions">
+            {[
+              "Which investigations have unresolved payment or order conflicts?",
+              "What evidence is missing to explain a delayed order?",
+              "Summarize the highest-risk signals in my workspace.",
+            ].map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className="ai-prompt-chip"
+                onClick={() => setPrompt(suggestion)}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+          <form
+            className="ai-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void onSubmit();
+            }}
+          >
+            <label className="visually-hidden" htmlFor="ai-question">Your business question</label>
+            <textarea
+              id="ai-question"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="ai-input"
+              rows={4}
+              maxLength={2000}
+              placeholder="For example: Investigate why order #1024 has not shipped despite a successful payment."
+            />
+            <div className="ai-form-footer">
+              <span className="ai-privacy-note">
+                Your question and relevant TRACE records are sent to OpenAI for this response.
+              </span>
+              <button className="button" type="submit" disabled={busy || !prompt.trim() || configured === false}>
+                {busy ? <><span className="ai-spinner" /> Investigating…</> : <>Run investigation <Arrow /></>}
+              </button>
+            </div>
+          </form>
+          {configured === false && (
+            <div className="ai-config-notice">
+              <b>OpenAI is not configured.</b>
+              <span>Add <code>OPENAI_API_KEY</code> to the server environment and restart TRACE to enable live responses.</span>
+            </div>
+          )}
+          {error && <div className="inline-error">{error}</div>}
+          <div className="ai-data-strip">
+            <span>
+              <i
+                className={`ai-status-dot${configured === false ? " is-off" : configured === null ? " is-checking" : ""}`}
+              />
+              {configured ? "OpenAI configured" : configured === false ? "AI unavailable" : "Checking AI configuration"}
+            </span>
+            <span>{events.length} events</span>
+            <span>{investigations.length} investigations</span>
+            <span>{findings.length} deterministic findings</span>
+          </div>
+        </section>
+        {result ? (
+          <section className="panel ai-answer">
+            <div className="ai-answer-head">
+              <div>
+                <span className="section-kicker">INVESTIGATION RESULT</span>
+                <h2>Evidence review</h2>
+              </div>
+              <span className="ai-model-badge"><i /> {result.model}</span>
+            </div>
+            <div className="ai-answer-body">{result.answer}</div>
+            <div className="ai-evidence">
+              <div className="ai-evidence-title">
+                <span className="section-kicker">TRACE CONTEXT</span>
+                <span>{result.evidence.eventCount} records reviewed</span>
+              </div>
+              <div className="ai-evidence-stats">
+                <div><strong>{result.evidence.investigationCount}</strong><span>cases in context</span></div>
+                <div><strong>{result.evidence.findingCount}</strong><span>rule findings</span></div>
+                <div><strong>{result.evidence.records.length}</strong><span>referenced records</span></div>
+              </div>
+              {result.evidence.records.length > 0 && (
+                <ul className="ai-record-list">
+                  {result.evidence.records.map((record) => (
+                    <li key={record.id}>
+                      <span className="ai-record-id">EV-{record.id}</span>
+                      <span>{record.title}</span>
+                      <small>{titleCase(record.type)} · {formatDate(record.occurredAt, true)}</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="ai-empty-state">
+            <span className="ai-empty-mark">✦</span>
+            <span className="section-kicker">READY TO INVESTIGATE</span>
+            <h2>Start with a business question</h2>
+            <p>TRACE will retrieve your events, investigations, relationships, and deterministic checks. OpenAI will reason over that evidence and call out what is unknown.</p>
+            <div className="ai-empty-stats">
+              <span><b>{events.length}</b> recorded events</span>
+              <span><b>{investigations.length}</b> investigations</span>
+              <span><b>{findings.length}</b> rule findings</span>
+            </div>
+          </section>
         )}
       </div>
     </>
